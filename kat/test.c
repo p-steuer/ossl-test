@@ -36,17 +36,11 @@ int main(void)
 	if (EVP_CIPHER_CTX_reset(ctx) != 1)
 		test_failed("EVP_CIPHER_CTX_reset failed");
 
-	for (tv = AES_GCM_TV, i = 0; i < AES_GCM_TV_LEN; tv++, i++) {
-		printf("aes-gcm test %d: ", i);
+	for (tv = AES_GCM_TV, i = 0; i < AES_GCM_TV_LEN; tv++, i++)
 		aes_gcm_test(0);
-		printf("OK\n");
-	}
 	total += i;
-	for (tv = AES_GCM_TV, i = 0; i < AES_GCM_TV_LEN; tv++, i++) {
-		printf("aes-gcm test %d (in-place): ", i);
+	for (tv = AES_GCM_TV, i = 0; i < AES_GCM_TV_LEN; tv++, i++)
 		aes_gcm_test(1);
-		printf("OK\n");
-	}
 	total += i;
 
         EVP_CIPHER_CTX_free(ctx);
@@ -76,6 +70,8 @@ static void aes_gcm_test(int inplace)
 	size_t len, off, datalen;
 	int outlen, rv;
 
+	printf("aes-gcm test: ");
+
 	tv_out.pt = malloc_(tv->len);
 	tv_out.tag = malloc_(tv->taglen);
 	tv_out.ct = malloc_(tv->len);
@@ -87,9 +83,13 @@ static void aes_gcm_test(int inplace)
 			memcpy(tv_out.ct, tv->ct, tv->len);
 	}
 
+	printf("no.%d,", tv->i);
+
 	switch (tv->dir) {
 	case DEC:
+		printf("dec,");
 		if (inplace) {
+			printf("in-place,");
 			in = tv_out.ct;
 			buf = tv_out.ct;
 		} else {
@@ -99,7 +99,9 @@ static void aes_gcm_test(int inplace)
 		out = tv->pt;
 		break;
 	case ENC:
+		printf("enc,");
 		if (inplace) {
+			printf("in-place,");
 			in = tv_out.pt;
 			buf = tv_out.pt;
 		} else {
@@ -214,4 +216,5 @@ _ptct_done_:
 	free(tv_out.pt);
 	free(tv_out.tag);
 	free(tv_out.ct);
+	printf("OK\n");
 }
