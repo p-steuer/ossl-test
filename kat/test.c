@@ -136,22 +136,39 @@ static void aes_gcm_test(int inplace)
 	if (EVP_CipherInit_ex(ctx, NULL, NULL, tv->key, tv->iv, tv->dir) != 1)
 		test_failed("EVP_EncryptInit_ex failed (%d)", tv->i);
 
+	printf("aad(");
 	datalen = tv->aadlen;
 	off = 0;
-	while (off != datalen) {
+
+	if (tv->aadlen == 0)
+		goto _aad_done_;
+
+	while (1) {
 		len = rand() % (datalen + 1 - off);
+
+		printf("%lu", len);
 
 		if (EVP_CipherUpdate(ctx, NULL, &outlen, tv->aad + off, len)
 		    != 1)
 			test_failed("EVP_CipherUpdate failed (%d)", tv->i);
 
-		off += len;
+		if ((off += len) != datalen)
+			printf(",");
+		else
+			break;
 	}
-
+_aad_done_:
+	printf("),pt(");
 	datalen = tv->len;
 	off = 0;
-	while (off != datalen) {
+
+	if (tv->len == 0)
+		goto _ptct_done_;
+
+	while (1) {
 		len = rand() % (datalen + 1 - off);
+
+		printf("%lu", len);
 
 		if (EVP_CipherUpdate(ctx, buf + off, &outlen, in + off, len)
 		    != 1)
@@ -159,8 +176,13 @@ static void aes_gcm_test(int inplace)
 		if ((size_t)outlen != len)
 			test_failed("EVP_CipherUpdate failed (%d)", tv->i);
 
-		off += len;
+		if ((off += len) != datalen)
+			printf(",");
+		else
+			break;
 	}
+_ptct_done_:
+	printf(") ... ");
 
 	if (tv->dir == DEC) {
 		if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG,
