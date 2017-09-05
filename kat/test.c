@@ -197,7 +197,7 @@ _ptct_done_:
 	if (((tv->dir == ENC) && (rv != 1))
 	    || ((tv->dir == DEC) && (tv->rv == SUCC) && (rv < 1))
 	    || ((tv->dir == DEC) && (tv->rv == FAIL) && (rv >= 1)))
-		test_failed("EVP_CipherFinal failed (%d)", tv->i);
+		test_failed("EVP_CipherFinal_ex failed (%d)", tv->i);
 
 	if ((out != NULL) && (memcmp(buf, out, datalen) != 0))
 		test_failed("Wrong plain/cipher-text (%d)", tv->i);
