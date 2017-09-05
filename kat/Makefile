@@ -1,5 +1,5 @@
 CC	= gcc
-CFLAGS	= -Wall
+CFLAGS	= -Wall -O0 -g
 LPATH	= -L/usr/local/lib64 -L/usr/local/lib
 
 all	: test
