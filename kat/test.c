@@ -1,5 +1,6 @@
 /* Author: Patrick Steuer <psteuer@mail.de> */
 
+#include <openssl/conf.h>
 #include <openssl/engine.h>
 #include <openssl/evp.h>
 #include <openssl/opensslv.h>
@@ -11,6 +12,14 @@
 
 #include "test.h"
 #include "testvec.h"
+
+/* COMPAT MACROS */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#else
+ #define EVP_CTRL_GCM_SET_IVLEN			EVP_CTRL_AEAD_SET_IVLEN
+ #define EVP_CTRL_GCM_SET_TAG			EVP_CTRL_AEAD_SET_TAG
+ #define EVP_CTRL_GCM_GET_TAG			EVP_CTRL_AEAD_GET_TAG
+#endif
 
 static void *malloc_(size_t len);
 static void aes_gcm_test(int inplace);
@@ -24,8 +33,13 @@ int main(void)
 	time_t seed;
 	int i;
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+	OpenSSL_add_all_algorithms();
+	OPENSSL_config(NULL);
+#else
 	OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_DYNAMIC
 	    | OPENSSL_INIT_LOAD_CONFIG, NULL);
+#endif
 
 	srand(time(&seed));
 
@@ -33,8 +47,13 @@ int main(void)
 
 	if ((ctx = EVP_CIPHER_CTX_new()) == NULL)
 		test_failed("EVP_CIPHER_CTX failed");
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+	if (EVP_CIPHER_CTX_cleanup(ctx) != 1)
+		test_failed("EVP_CIPHER_CTX_cleanup failed (%d)", tv->i);
+#else
 	if (EVP_CIPHER_CTX_reset(ctx) != 1)
-		test_failed("EVP_CIPHER_CTX_reset failed");
+		test_failed("EVP_CIPHER_CTX_reset failed (%d)", tv->i);
+#endif
 
 	for (tv = AES_GCM_TV, i = 0; i < AES_GCM_TV_LEN; tv++, i++)
 		aes_gcm_test(0);
@@ -47,6 +66,7 @@ int main(void)
 
 	printf("All %llu tests passed.\n", total);
 	test_passed();
+	return 0;
 }
 
 static void *malloc_(size_t len)
@@ -131,7 +151,7 @@ static void aes_gcm_test(int inplace)
 	if (EVP_CipherInit_ex(ctx, type, NULL, NULL, NULL, -1) != 1)
 		test_failed("EVP_EncryptInit_ex failed (%d)", tv->i);
 
-	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_IVLEN, tv->ivlen,
+	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, tv->ivlen,
 				 NULL))
 		test_failed("EVP_CIPHER_CTX_ctrl failed (%d)", tv->i);
 
@@ -187,7 +207,7 @@ _ptct_done_:
 	printf(") ... ");
 
 	if (tv->dir == DEC) {
-		if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG,
+		if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG,
 		    tv->taglen, tv->tag))
 			test_failed("EVP_CIPHER_CTX_ctrl failed (%d)", tv->i);
 	}
@@ -203,15 +223,20 @@ _ptct_done_:
 		test_failed("Wrong plain/cipher-text (%d)", tv->i);
 
 	if (tv->dir == ENC) {
-		if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_GET_TAG,
+		if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG,
 					 tv->taglen, tv_out.tag))
 			test_failed("EVP_CIPHER_CTX_ctrl failed (%d)", tv->i);
 		if (memcmp(tv_out.tag, tv->tag, tv->taglen) != 0)
 			test_failed("Wrong tag value (%d)", tv->i);
 	}
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+	if (EVP_CIPHER_CTX_cleanup(ctx) != 1)
+		test_failed("EVP_CIPHER_CTX_cleanup failed (%d)", tv->i);
+#else
 	if (EVP_CIPHER_CTX_reset(ctx) != 1)
 		test_failed("EVP_CIPHER_CTX_reset failed (%d)", tv->i);
+#endif
 
 	free(tv_out.pt);
 	free(tv_out.tag);
