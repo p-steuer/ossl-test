@@ -5,7 +5,7 @@ test scripts.
 
 ### perf.pl
 
-Usage: ./perf.pl [openssl source path]
+Usage: ./perf.pl [openssl tool path]
 
 Runs the openssl speed tool in different environments.
 
