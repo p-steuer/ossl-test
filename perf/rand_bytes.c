@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "perf.h"
 
-#define BYTES		(10172 * 49152ULL)	/* n * lcm(buflen_list) */
+#define BYTES		(20345 * 49152ULL)	/* n * lcm(buflen_list) */
 
 #define BUFLENMAX	65536ULL
 #define BUFLENLAST	0ULL
@@ -25,7 +25,7 @@ int main(void)
 
 		d = dt(&t1, &t2);
 
-		printf("RAND_bytes(buf, %llu):\t", *buflen);
+		printf("RAND_bytes(buf, %llu): ", *buflen);
 		printf("%llu Kbytes in %.02Lf sec [%.02Lf Kbytes/sec,"
 		       " %.02Lf cycles/byte]\n",
 		       kbytes(*buflen * imax), sec(d),
