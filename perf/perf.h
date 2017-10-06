@@ -2,7 +2,7 @@
 # define PERF_H
 
 # include <sys/time.h>
-# include "cpuinfo.h"
+# include "../include/conf.h"
 
 static inline unsigned long long
 dt(struct timeval *t1, struct timeval *t2)

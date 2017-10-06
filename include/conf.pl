@@ -3,14 +3,17 @@
 use strict;
 use warnings;
 
-my $file='cpuinfo.h';
+my $file='conf.h';
 my $cpuinfo=`cat /proc/cpuinfo`;
 my ($mhz)=$cpuinfo=~m/cpu MHz dynamic : (\d+)/;
+my $osslinfo=`openssl version -a`;
+my ($seed)=$osslinfo=~m/Seeding source: (.*)$/;
 my $out=<<__;
-#ifndef CPUINFO_H
-# define CPUINFO_H
+#ifndef CONF_H
+# define CONF_H
 
-# define MHZ	$mhz
+# define MHZ		$mhz
+# define SEED		"$seed"
 
 #endif
 __
