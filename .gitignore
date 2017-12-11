@@ -1,0 +1,6 @@
+include/conf.h
+kat/test
+kat/testvec.c
+kat/testvec.o
+perf/rand_bytes
+perf/rand_poll
