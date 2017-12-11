@@ -6,6 +6,12 @@ use warnings;
 
 my @testvectors=
 (
+"gcmDecrypt128_ossl.rsp",
+"gcmDecrypt192_ossl.rsp",
+"gcmDecrypt256_ossl.rsp",
+"gcmEncryptExtIV128_ossl.rsp",
+"gcmEncryptExtIV192_ossl.rsp",
+"gcmEncryptExtIV256_ossl.rsp",
 "gcmDecrypt128.rsp",
 "gcmDecrypt192.rsp",
 "gcmDecrypt256.rsp",
@@ -129,7 +135,7 @@ while ($line=<$fdin>) {
 	$pt=$1 if ($line=~/$ptre/);
 	$fail="FAIL" if ($line=~/$failre/);
 
-	if (($line=~/^\s+/)&&($toggle)) {
+	if (($line=~/^\s*$/)&&($toggle)) {
 		$toggle=0;
 		$key=tocarray($key);
 		$iv=tocarray($iv);
