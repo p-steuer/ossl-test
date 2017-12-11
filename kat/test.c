@@ -160,6 +160,12 @@ static void aes_gcm_test(int inplace, int stream)
 	if (EVP_CipherInit_ex(ctx, type, NULL, NULL, NULL, -1) != 1)
 		test_failed("EVP_EncryptInit_ex failed (%d)", tv->i);
 
+	if (tv->dir == DEC) {
+		if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG,
+		    tv->taglen, tv->tag))
+			test_failed("EVP_CIPHER_CTX_ctrl failed (%d)", tv->i);
+	}
+
 	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, tv->ivlen,
 				 NULL))
 		test_failed("EVP_CIPHER_CTX_ctrl failed (%d)", tv->i);
@@ -214,12 +220,6 @@ _aad_done_:
 	}
 _ptct_done_:
 	printf(") ... ");
-
-	if (tv->dir == DEC) {
-		if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG,
-		    tv->taglen, tv->tag))
-			test_failed("EVP_CIPHER_CTX_ctrl failed (%d)", tv->i);
-	}
 
 	rv = EVP_CipherFinal_ex(ctx, buf + off, &outlen);
 
