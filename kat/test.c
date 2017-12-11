@@ -22,7 +22,7 @@
 #endif
 
 static void *malloc_(size_t len);
-static void aes_gcm_test(int inplace);
+static void aes_gcm_test(int inplace, int stream);
 
 const struct aead_tv *tv;
 EVP_CIPHER_CTX *ctx;
@@ -56,10 +56,16 @@ int main(void)
 #endif
 
 	for (tv = AES_GCM_TV, i = 0; i < AES_GCM_TV_LEN; tv++, i++)
-		aes_gcm_test(0);
+		aes_gcm_test(0, 0);
 	total += i;
 	for (tv = AES_GCM_TV, i = 0; i < AES_GCM_TV_LEN; tv++, i++)
-		aes_gcm_test(1);
+		aes_gcm_test(1, 0);
+	total += i;
+	for (tv = AES_GCM_TV, i = 0; i < AES_GCM_TV_LEN; tv++, i++)
+		aes_gcm_test(0, 1);
+	total += i;
+	for (tv = AES_GCM_TV, i = 0; i < AES_GCM_TV_LEN; tv++, i++)
+		aes_gcm_test(1, 1);
 	total += i;
 
         EVP_CIPHER_CTX_free(ctx);
@@ -82,7 +88,7 @@ static void *malloc_(size_t len)
 	return ptr;
 }
 
-static void aes_gcm_test(int inplace)
+static void aes_gcm_test(int inplace, int stream)
 {
 	struct aead_tv tv_out;
 	unsigned char *in, *out, *buf;
@@ -134,6 +140,9 @@ static void aes_gcm_test(int inplace)
 		test_failed("Invalid test vector (%d)", tv->i);
 	}
 
+	if (stream)
+		printf("stream,");
+
 	switch (tv->keylen * 8) {
 	case 128:
 		type = EVP_aes_128_gcm();
@@ -166,7 +175,7 @@ static void aes_gcm_test(int inplace)
 		goto _aad_done_;
 
 	while (1) {
-		len = rand() % (datalen + 1 - off);
+		len = stream ? (rand() % (datalen + 1 - off)) : datalen;
 
 		printf("%lu", len);
 
@@ -188,7 +197,7 @@ _aad_done_:
 		goto _ptct_done_;
 
 	while (1) {
-		len = rand() % (datalen + 1 - off);
+		len = stream ? (rand() % (datalen + 1 - off)) : datalen;
 
 		printf("%lu", len);
 
