@@ -424,6 +424,10 @@ _aad_done_:
 
 	printf(") ... ");
 
+	/* Not needed with ccm, works only with > 1.1.0 */
+	if (EVP_CipherFinal(ctx, buf + outlen, &outlen) != 1)
+		test_failed("EVP_CipherFinal failed (%d)", tv->i);
+
 	if ((out != NULL) && (memcmp(buf, out, datalen) != 0))
 		test_failed("Wrong plain/cipher-text (%d)", tv->i);
 
