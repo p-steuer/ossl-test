@@ -11,9 +11,10 @@
 #define SUCC	1
 #define FAIL	0
 
-struct aead_tv {
+struct aes_gcm_tv {
 	int i;
 	int dir;
+
 	int count;
 	size_t keylen;
 	size_t ivlen;
@@ -29,7 +30,29 @@ struct aead_tv {
 	int rv;
 };
 
-extern const struct aead_tv AES_GCM_TV[];
+struct aes_ccm_tv {
+	int i;
+	int dir;
+	size_t keylen;
+
+	size_t alen;
+	size_t plen;
+	size_t nlen;
+	size_t tlen;
+
+	unsigned char *key;
+
+	int count;
+	unsigned char *nonce;
+	unsigned char *adata;
+	unsigned char *ct;
+	int rv;
+	unsigned char *payload;
+};
+
+extern const struct aes_gcm_tv AES_GCM_TV[];
 extern const size_t AES_GCM_TV_LEN;
+extern const struct aes_ccm_tv AES_CCM_TV[];
+extern const size_t AES_CCM_TV_LEN;
 
 #endif

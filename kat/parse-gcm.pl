@@ -19,11 +19,9 @@ my @testvectors=
 "gcmEncryptExtIV192.rsp",
 "gcmEncryptExtIV256.rsp",
 );
-my $source="http://csrc.nist.gov/groups/STM/cavp/block-cipher-modes.html"
-    ."#test-vectors";
 
 my ($in,$fdin);
-my ($out,$fdout)=("testvec.c");
+my ($out,$fdout)=("testvec-gcm.c");
 
 my ($keylen,$keylenre)=(0,'^\[Keylen = (128|192|256)\]');
 my ($ivlen,$ivlenre)=(0,'^\[IVlen = (\d+)\]');
@@ -71,23 +69,9 @@ open($fdout,'>',$out) || die("Couldn't open $out ($!).");
 $i=0;
 
 $buf=<<__;
-/*
- * parse-nist.pl auto-generated
- *
- * test-vectors:
-__
-print({$fdout}$buf);
-for (@testvectors) {
-	print({$fdout}" *   $_\n");
-}
-$buf=<<__;
- * source:
- *   $source
- */
-
 #include "testvec.h"
 
-const struct aead_tv AES_GCM_TV[] = {
+const struct aes_gcm_tv AES_GCM_TV[] = {
 __
 print({$fdout}$buf);
 

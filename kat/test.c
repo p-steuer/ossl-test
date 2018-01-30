@@ -19,16 +19,23 @@
  #define EVP_CTRL_GCM_SET_IVLEN			EVP_CTRL_AEAD_SET_IVLEN
  #define EVP_CTRL_GCM_SET_TAG			EVP_CTRL_AEAD_SET_TAG
  #define EVP_CTRL_GCM_GET_TAG			EVP_CTRL_AEAD_GET_TAG
+
+ #define EVP_CTRL_CCM_SET_IVLEN			EVP_CTRL_AEAD_SET_IVLEN
+ #define EVP_CTRL_CCM_SET_TAG			EVP_CTRL_AEAD_SET_TAG
+ #define EVP_CTRL_CCM_GET_TAG			EVP_CTRL_AEAD_GET_TAG
 #endif
 
 static void *malloc_(size_t len);
-static void aes_gcm_test(int inplace, int stream);
+static void aes_gcm_test(int inplace, int stream, const struct aes_gcm_tv *tv);
+static void aes_ccm_test(int inplace, const struct aes_ccm_tv *tv);
 
-const struct aead_tv *tv;
 EVP_CIPHER_CTX *ctx;
 
 int main(void)
 {
+	const struct aes_gcm_tv *aes_gcm_tvec;
+	const struct aes_ccm_tv *aes_ccm_tvec;
+
 	unsigned long long total;
 	time_t seed;
 	int i;
@@ -49,23 +56,32 @@ int main(void)
 		test_failed("EVP_CIPHER_CTX failed");
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 	if (EVP_CIPHER_CTX_cleanup(ctx) != 1)
-		test_failed("EVP_CIPHER_CTX_cleanup failed (%d)", tv->i);
+		test_failed("EVP_CIPHER_CTX_cleanup failed");
 #else
 	if (EVP_CIPHER_CTX_reset(ctx) != 1)
-		test_failed("EVP_CIPHER_CTX_reset failed (%d)", tv->i);
+		test_failed("EVP_CIPHER_CTX_reset failed");
 #endif
 
-	for (tv = AES_GCM_TV, i = 0; i < AES_GCM_TV_LEN; tv++, i++)
-		aes_gcm_test(0, 0);
+	/* aes-gcm */
+	for (aes_gcm_tvec = AES_GCM_TV, i = 0; i < AES_GCM_TV_LEN; aes_gcm_tvec++, i++)
+		aes_gcm_test(0, 0, aes_gcm_tvec);
 	total += i;
-	for (tv = AES_GCM_TV, i = 0; i < AES_GCM_TV_LEN; tv++, i++)
-		aes_gcm_test(1, 0);
+	for (aes_gcm_tvec = AES_GCM_TV, i = 0; i < AES_GCM_TV_LEN; aes_gcm_tvec++, i++)
+		aes_gcm_test(1, 0, aes_gcm_tvec);
 	total += i;
-	for (tv = AES_GCM_TV, i = 0; i < AES_GCM_TV_LEN; tv++, i++)
-		aes_gcm_test(0, 1);
+	for (aes_gcm_tvec = AES_GCM_TV, i = 0; i < AES_GCM_TV_LEN; aes_gcm_tvec++, i++)
+		aes_gcm_test(0, 1, aes_gcm_tvec);
 	total += i;
-	for (tv = AES_GCM_TV, i = 0; i < AES_GCM_TV_LEN; tv++, i++)
-		aes_gcm_test(1, 1);
+	for (aes_gcm_tvec = AES_GCM_TV, i = 0; i < AES_GCM_TV_LEN; aes_gcm_tvec++, i++)
+		aes_gcm_test(1, 1, aes_gcm_tvec);
+	total += i;
+
+	/* aes-ccm */
+	for (aes_ccm_tvec = AES_CCM_TV, i = 0; i < AES_CCM_TV_LEN; aes_ccm_tvec++, i++)
+		aes_ccm_test(0, aes_ccm_tvec);
+	total += i;
+	for (aes_ccm_tvec = AES_CCM_TV, i = 0; i < AES_CCM_TV_LEN; aes_ccm_tvec++, i++)
+		aes_ccm_test(1, aes_ccm_tvec);
 	total += i;
 
         EVP_CIPHER_CTX_free(ctx);
@@ -83,14 +99,14 @@ static void *malloc_(size_t len)
 		return NULL;
 
 	if ((ptr = malloc(len)) == NULL)
-		test_failed("malloc failed (%d)", tv->i);
+		test_failed("malloc failed");
 
 	return ptr;
 }
 
-static void aes_gcm_test(int inplace, int stream)
+static void aes_gcm_test(int inplace, int stream, const struct aes_gcm_tv *tv)
 {
-	struct aead_tv tv_out;
+	struct aes_gcm_tv tv_out;
 	unsigned char *in, *out, *buf;
 	const EVP_CIPHER *type;
 	size_t len, off, datalen;
@@ -250,5 +266,149 @@ _ptct_done_:
 	free(tv_out.pt);
 	free(tv_out.tag);
 	free(tv_out.ct);
+	printf("OK\n");
+}
+
+static void aes_ccm_test(int inplace, const struct aes_ccm_tv *tv)
+{
+	struct aes_ccm_tv tv_out;
+	unsigned char *in, *out, *buf, tag[16];
+	const EVP_CIPHER *type;
+	size_t len, datalen;
+	int outlen, rv;
+
+	printf("aes-ccm test: ");
+
+	tv_out.ct = malloc_(tv->plen + tv->tlen);
+	tv_out.payload = malloc_(tv->plen);
+
+	if (inplace) {
+		if ((tv_out.payload != NULL) && (tv->payload != NULL))
+			memcpy(tv_out.payload, tv->payload, tv->plen);
+		if ((tv_out.ct != NULL) && (tv->ct != NULL))
+			memcpy(tv_out.ct, tv->ct, tv->plen + tv->tlen);
+	}
+
+	printf("no.%d,", tv->i);
+
+	switch (tv->dir) {
+	case DEC:
+		printf("dec,");
+		if (inplace) {
+			printf("in-place,");
+			in = tv_out.ct;
+			buf = tv_out.ct;
+		} else {
+			in = tv->ct;
+			buf = tv_out.ct;
+		}
+		out = tv->payload;
+		break;
+	case ENC:
+		printf("enc,");
+		if (inplace) {
+			printf("in-place,");
+			in = tv_out.payload;
+			buf = tv_out.payload;
+		} else {
+			in = tv->payload;
+			buf = tv_out.payload;
+		}
+		out = tv->ct;
+		break;
+	default:
+		test_failed("Invalid test vector (%d)", tv->i);
+	}
+
+	switch (tv->keylen * 8) {
+	case 128:
+		type = EVP_aes_128_ccm();
+		break;
+	case 192:
+		type = EVP_aes_192_ccm();
+		break;
+	case 256:
+		type = EVP_aes_256_ccm();
+		break;
+	default:
+		test_failed("Invalid test vector (%d)", tv->i);
+	}
+
+	if (EVP_CipherInit_ex(ctx, type, NULL, NULL, NULL, tv->dir) != 1)
+		test_failed("EVP_EncryptInit_ex failed (%d)", tv->i);
+
+	if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, tv->nlen,
+				 NULL))
+		test_failed("EVP_CIPHER_CTX_ctrl failed (%d)", tv->i);
+
+	if (tv->dir == DEC) {
+		if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_TAG,
+		    tv->tlen, tv->ct + tv->plen))
+			test_failed("EVP_CIPHER_CTX_ctrl failed (%d)", tv->i);
+	}
+
+	if (EVP_CipherInit_ex(ctx, NULL, NULL, tv->key, tv->nonce, -1) != 1)
+		test_failed("EVP_EncryptInit_ex failed (%d)", tv->i);
+
+	/* pass packet length */
+	if (EVP_CipherUpdate(ctx, NULL, &outlen, NULL, tv->plen) != 1)
+		test_failed("EVP_CipherUpdate failed (%d)", tv->i);
+
+	printf("aad(");
+	datalen = tv->alen;
+
+	if (tv->alen == 0)
+		goto _aad_done_;
+
+	len = datalen;
+	printf("%lu", len);
+
+	if (EVP_CipherUpdate(ctx, NULL, &outlen, tv->adata, len) != 1)
+		test_failed("EVP_CipherUpdate failed (%d)", tv->i);
+
+_aad_done_:
+	printf("),pt(");
+	datalen = tv->plen;
+
+	if (tv->plen == 0)
+		goto _ptct_done_;
+
+	len = datalen;
+	printf("%lu", len);
+
+	rv = EVP_CipherUpdate(ctx, buf, &outlen, in, len);
+	if (rv == 1 && (size_t)outlen != len)
+		test_failed("EVP_CipherUpdate failed (%d)", tv->i);
+	if (((tv->dir == ENC) && (rv != 1))
+	    || ((tv->dir == DEC) && (tv->rv == SUCC) && (rv < 1))
+	    || ((tv->dir == DEC) && (tv->rv == FAIL) && (rv >= 1)))
+		test_failed("EVP_CipherUpdate failed (%d)", tv->i);
+
+_ptct_done_:
+	printf(") ... ");
+
+	EVP_CipherFinal_ex(ctx, NULL, &outlen);	/* not needed for ccm */
+
+	if ((out != NULL) && (memcmp(buf, out, datalen) != 0))
+		test_failed("Wrong plain/cipher-text (%d)", tv->i);
+
+	if (tv->dir == ENC) {
+		if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_GET_TAG, tv->tlen,
+					 tag))
+			test_failed("EVP_CIPHER_CTX_ctrl failed (%d)", tv->i);
+		if (memcmp(tv_out.ct + tv->plen, tag, tv->tlen) != 0)
+			test_failed("Wrong tag value (%d)", tv->i);
+	}
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+	if (EVP_CIPHER_CTX_cleanup(ctx) != 1)
+		test_failed("EVP_CIPHER_CTX_cleanup failed (%d)", tv->i);
+#else
+	if (EVP_CIPHER_CTX_reset(ctx) != 1)
+		test_failed("EVP_CIPHER_CTX_reset failed (%d)", tv->i);
+#endif
+
+	free(tv_out.ct);
+	free(tv_out.payload);
 	printf("OK\n");
 }
