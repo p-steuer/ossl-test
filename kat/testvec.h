@@ -52,7 +52,9 @@ struct aes_ccm_tv {
 
 extern const struct aes_gcm_tv AES_GCM_TV[];
 extern const size_t AES_GCM_TV_LEN;
-extern const struct aes_ccm_tv AES_CCM_TV[];
-extern const size_t AES_CCM_TV_LEN;
+extern const struct aes_ccm_tv AES_CCM_TV_DVPT[];
+extern const size_t AES_CCM_TV_DVPT_LEN;
+extern const struct aes_ccm_tv AES_CCM_TV_VADT[];
+extern const size_t AES_CCM_TV_VADT_LEN;
 
 #endif

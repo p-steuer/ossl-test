@@ -77,10 +77,16 @@ int main(void)
 	total += i;
 
 	/* aes-ccm */
-	for (aes_ccm_tvec = AES_CCM_TV, i = 0; i < AES_CCM_TV_LEN; aes_ccm_tvec++, i++)
+	for (aes_ccm_tvec = AES_CCM_TV_DVPT, i = 0; i < AES_CCM_TV_DVPT_LEN; aes_ccm_tvec++, i++)
 		aes_ccm_test(0, aes_ccm_tvec);
 	total += i;
-	for (aes_ccm_tvec = AES_CCM_TV, i = 0; i < AES_CCM_TV_LEN; aes_ccm_tvec++, i++)
+	for (aes_ccm_tvec = AES_CCM_TV_DVPT, i = 0; i < AES_CCM_TV_DVPT_LEN; aes_ccm_tvec++, i++)
+		aes_ccm_test(1, aes_ccm_tvec);
+	total += i;
+	for (aes_ccm_tvec = AES_CCM_TV_VADT, i = 0; i < AES_CCM_TV_VADT_LEN; aes_ccm_tvec++, i++)
+		aes_ccm_test(0, aes_ccm_tvec);
+	total += i;
+	for (aes_ccm_tvec = AES_CCM_TV_VADT, i = 0; i < AES_CCM_TV_VADT_LEN; aes_ccm_tvec++, i++)
 		aes_ccm_test(1, aes_ccm_tvec);
 	total += i;
 
@@ -345,6 +351,10 @@ static void aes_ccm_test(int inplace, const struct aes_ccm_tv *tv)
 		if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_TAG,
 		    tv->tlen, tv->ct + tv->plen))
 			test_failed("EVP_CIPHER_CTX_ctrl failed (%d)", tv->i);
+	} else {
+		if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_TAG,
+		    tv->tlen, NULL))
+			test_failed("EVP_CIPHER_CTX_ctrl failed (%d)", tv->i);
 	}
 
 	if (EVP_CipherInit_ex(ctx, NULL, NULL, tv->key, tv->nonce, -1) != 1)
@@ -396,7 +406,7 @@ _ptct_done_:
 		if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_GET_TAG, tv->tlen,
 					 tag))
 			test_failed("EVP_CIPHER_CTX_ctrl failed (%d)", tv->i);
-		if (memcmp(tv_out.ct + tv->plen, tag, tv->tlen) != 0)
+		if (memcmp(tv->ct + tv->plen, tag, tv->tlen) != 0)
 			test_failed("Wrong tag value (%d)", tv->i);
 	}
 

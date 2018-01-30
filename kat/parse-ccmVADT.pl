@@ -6,24 +6,27 @@ use warnings;
 
 my @testvectors=
 (
-"DVPT128.rsp",
-"DVPT192.rsp",
-"DVPT256.rsp",
+"ccmVADT128.rsp",
+"ccmVADT192.rsp",
+"ccmVADT256.rsp",
 );
 
 my ($in,$fdin);
-my ($out,$fdout)=("testvec-ccm.c");
+my ($out,$fdout)=("testvec-ccmVADT.c");
 
-my ($keylen,$alen,$plen,$nlen,$tlen,$lenre)=(0,0,0,0,0,'^\[Alen = (\d+), Plen = (\d+), Nlen = (\d+), Tlen = (\d+)\]');
+my ($plen,$plenre)=(0,'^Plen = (\d+)');
+my ($nlen,$nlenre)=(0,'^Nlen = (\d+)');
+my ($tlen,$tlenre)=(0,'^Tlen = (\d+)');
 
-my ($key,$keyre)=("",'^Key = ([0-9a-f]*)');
+my ($alen,$alenre)=(0,'^\[Alen = (\d+)\]');
+
+my ($key,$keyre,$keylen)=("",'^Key = ([0-9a-f]*)',0);
+my ($nonce,$noncere)=("",'^Nonce = ([0-9a-f]*)');
 
 my ($count,$countre)=("",'^Count = (\d+)');
-my ($nonce,$noncere)=("",'^Nonce = ([0-9a-f]*)');
 my ($adata,$adatare)=("",'^Adata = ([0-9a-f]*)');
-my ($ct,$ctre)=("",'^CT = ([0-9a-f]*)');
-my ($fail,$failre)=("",'^Result = Fail');
 my ($payload,$payloadre)=("",'^Payload = ([0-9a-f]*)');
+my ($ct,$ctre)=("",'^CT = ([0-9a-f]*)');
 
 my $toggle=0;
 my ($buf,$line,$dir,$i);
@@ -55,7 +58,7 @@ $i=0;
 $buf=<<__;
 #include "testvec.h"
 
-const struct aes_ccm_tv AES_CCM_TV[] = {
+const struct aes_ccm_tv AES_CCM_TV_VADT[] = {
 __
 print({$fdout}$buf);
 
@@ -68,33 +71,32 @@ open($fdin,'<',$in) || die("Couldn't open $in ($!).");
 while ($line=<$fdin>) {
 	chomp($line);
 
-	($alen,$plen,$nlen,$tlen)=($1,$2,$3,$4) if ($line=~/$lenre/);
+	$plen=$1 if ($line=~/$plenre/);
+	$nlen=$1 if ($line=~/$nlenre/);
+	$tlen=$1 if ($line=~/$tlenre/);
 
+	$alen=$1 if ($line=~/$alenre/);
 	if ($line=~/$keyre/) {
 		$key=$1;
 		$keylen=length($key)/2;
 		$key=tocarray($key);
 	}
+	$nonce=tocarray($1) if ($line=~/$noncere/);
 
 	if ($line=~/$countre/) {	# new test-vector
 		$toggle=1;
 		$count=$1;
-		$nonce="";
 		$adata="";
 		$ct="";
-		$fail="SUCC";
 		$payload="";
 	}
-	$dir="DEC";
-	$nonce=$1 if ($line=~/$noncere/);
+	$dir="ENC";
 	$adata=$1 if ($line=~/$adatare/);
 	$ct=$1 if ($line=~/$ctre/);
-	$fail="FAIL" if ($line=~/$failre/);
 	$payload=$1 if ($line=~/$payloadre/);
 
 	if (($line=~/^\s*$/)&&($toggle)) {
 		$toggle=0;
-		$nonce=tocarray($nonce);
 		$adata=tocarray($adata);
 		$ct=tocarray($ct);
 		$payload=tocarray($payload);
@@ -116,7 +118,7 @@ while ($line=<$fdin>) {
 		.nonce = $nonce,
 		.adata = $adata,
 		.ct = $ct,
-		.rv = $fail,
+		.rv = SUCC,
 		.payload = $payload,
 		},
 		})=~s/^\s*//mg;
@@ -130,7 +132,7 @@ close($fdin);
 $buf=<<__;
 };
 
-const size_t AES_CCM_TV_LEN = sizeof(AES_CCM_TV) / sizeof(AES_CCM_TV[0]);
+const size_t AES_CCM_TV_VADT_LEN = sizeof(AES_CCM_TV_VADT) / sizeof(AES_CCM_TV_VADT[0]);
 __
 print({$fdout}$buf);
 close($fdout);
