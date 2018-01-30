@@ -3,7 +3,7 @@
 Usage: ./test
 
 Runs known answer tests (KAT) for openssl aes-128-gcm, aes-192-gcm,
-aes-256-gcm, aes-128-ccm, aes-192-ccm, ans aes-256-ccm.
+aes-256-gcm, aes-128-ccm, aes-192-ccm, and aes-256-ccm.
 
 ### .rsp-files
 

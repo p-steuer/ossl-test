@@ -62,7 +62,7 @@ int main(void)
 		test_failed("EVP_CIPHER_CTX_reset failed");
 #endif
 
-	/* aes-gcm */
+#ifndef NO_AESGCM
 	for (aes_gcm_tvec = AES_GCM_TV, i = 0; i < AES_GCM_TV_LEN; aes_gcm_tvec++, i++)
 		aes_gcm_test(0, 0, aes_gcm_tvec);
 	total += i;
@@ -75,8 +75,9 @@ int main(void)
 	for (aes_gcm_tvec = AES_GCM_TV, i = 0; i < AES_GCM_TV_LEN; aes_gcm_tvec++, i++)
 		aes_gcm_test(1, 1, aes_gcm_tvec);
 	total += i;
+#endif
 
-	/* aes-ccm */
+#ifndef NO_AESCCM
 	for (aes_ccm_tvec = AES_CCM_TV_DVPT, i = 0; i < AES_CCM_TV_DVPT_LEN; aes_ccm_tvec++, i++)
 		aes_ccm_test(0, aes_ccm_tvec);
 	total += i;
@@ -107,6 +108,7 @@ int main(void)
 	for (aes_ccm_tvec = AES_CCM_TV_VTT, i = 0; i < AES_CCM_TV_VTT_LEN; aes_ccm_tvec++, i++)
 		aes_ccm_test(1, aes_ccm_tvec);
 	total += i;
+#endif
 
         EVP_CIPHER_CTX_free(ctx);
 
@@ -398,8 +400,16 @@ _aad_done_:
 	printf("),pt(");
 	datalen = tv->plen;
 
-	if (tv->plen == 0)
-		goto _ptct_done_;
+	/*
+	 * ccm computes/compares the tag after with Update() because
+	 * potentially corrupted data has to be erased before it is output.
+	 * Therefore it is needed even for plen == 0. However, input and output
+	 * buffers must be non-NULL to trigger tag computation.
+	 */
+	if (tv->plen == 0) {
+		buf = (unsigned char *)1;
+		in = (unsigned char *)1;
+	}
 
 	len = datalen;
 	printf("%lu", len);
@@ -412,10 +422,7 @@ _aad_done_:
 	    || ((tv->dir == DEC) && (tv->rv == FAIL) && (rv >= 1)))
 		test_failed("EVP_CipherUpdate failed (%d)", tv->i);
 
-_ptct_done_:
 	printf(") ... ");
-
-	EVP_CipherFinal_ex(ctx, NULL, &outlen);	/* not needed for ccm */
 
 	if ((out != NULL) && (memcmp(buf, out, datalen) != 0))
 		test_failed("Wrong plain/cipher-text (%d)", tv->i);
