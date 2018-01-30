@@ -95,6 +95,12 @@ int main(void)
 	for (aes_ccm_tvec = AES_CCM_TV_VNT, i = 0; i < AES_CCM_TV_VNT_LEN; aes_ccm_tvec++, i++)
 		aes_ccm_test(1, aes_ccm_tvec);
 	total += i;
+	for (aes_ccm_tvec = AES_CCM_TV_VPT, i = 0; i < AES_CCM_TV_VPT_LEN; aes_ccm_tvec++, i++)
+		aes_ccm_test(0, aes_ccm_tvec);
+	total += i;
+	for (aes_ccm_tvec = AES_CCM_TV_VPT, i = 0; i < AES_CCM_TV_VPT_LEN; aes_ccm_tvec++, i++)
+		aes_ccm_test(1, aes_ccm_tvec);
+	total += i;
 
         EVP_CIPHER_CTX_free(ctx);
 
