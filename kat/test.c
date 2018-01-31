@@ -25,11 +25,17 @@
  #define EVP_CTRL_CCM_GET_TAG			EVP_CTRL_AEAD_GET_TAG
 #endif
 
+enum coin {
+	HEAD = 0,
+	TAIL = 1
+};
+
 static void *malloc_(size_t len);
 static void aes_gcm_test(int inplace, int stream, const struct aes_gcm_tv *tv);
 static void aes_ccm_test(int inplace, const struct aes_ccm_tv *tv);
+static enum coin toss_coin(void);
 
-EVP_CIPHER_CTX *ctx;
+static EVP_CIPHER_CTX *ctx;
 
 int main(void)
 {
@@ -128,6 +134,11 @@ static void *malloc_(size_t len)
 		test_failed("malloc failed");
 
 	return ptr;
+}
+
+static enum coin toss_coin(void)
+{
+	return rand() % 2;
 }
 
 static void aes_gcm_test(int inplace, int stream, const struct aes_gcm_tv *tv)
@@ -380,9 +391,15 @@ static void aes_ccm_test(int inplace, const struct aes_ccm_tv *tv)
 	if (EVP_CipherInit_ex(ctx, NULL, NULL, tv->key, tv->nonce, -1) != 1)
 		test_failed("EVP_EncryptInit_ex failed (%d)", tv->i);
 
-	/* pass packet length */
-	if (EVP_CipherUpdate(ctx, NULL, &outlen, NULL, tv->plen) != 1)
-		test_failed("EVP_CipherUpdate failed (%d)", tv->i);
+	/*
+	 * Pass packet length: this can be done later implicitely if alen == 0,
+	 * so a coin toss decides in this case whether its done now (HEAD) or
+	 * later (TAIL).
+	 */
+	if (tv->alen != 0 || toss_coin() == HEAD) {
+		if (EVP_CipherUpdate(ctx, NULL, &outlen, NULL, tv->plen) != 1)
+			test_failed("EVP_CipherUpdate failed (%d)", tv->i);
+	}
 
 	printf("aad(");
 	datalen = tv->alen;
