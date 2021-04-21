@@ -147,20 +147,13 @@ static void aes_gcm_test(int inplace, int stream, const struct aes_gcm_tv *tv)
 	unsigned char *in, *out, *buf;
 	const EVP_CIPHER *type;
 	size_t len, off, datalen;
-	int outlen, rv;
+	int outlen, rv, i;
 
 	printf("aes-gcm test: ");
 
 	tv_out.pt = malloc_(tv->len);
 	tv_out.tag = malloc_(tv->taglen);
 	tv_out.ct = malloc_(tv->len);
-
-	if (inplace) {
-		if ((tv_out.pt != NULL) && (tv->pt != NULL))
-			memcpy(tv_out.pt, tv->pt, tv->len);
-		if ((tv_out.ct != NULL) && (tv->ct != NULL))
-			memcpy(tv_out.ct, tv->ct, tv->len);
-	}
 
 	printf("no.%d,", tv->i);
 
@@ -225,6 +218,20 @@ static void aes_gcm_test(int inplace, int stream, const struct aes_gcm_tv *tv)
 
 	if (EVP_CipherInit_ex(ctx, NULL, NULL, tv->key, tv->iv, tv->dir) != 1)
 		test_failed("EVP_EncryptInit_ex failed (%d)", tv->i);
+
+for (i = 0; i < 2; i++) {
+
+	if (i == 1) {
+		if (EVP_CipherInit_ex(ctx, NULL, NULL, NULL,
+		                      toss_coin() == HEAD ? tv->iv : NULL, -1) != 1)
+			test_failed("EVP_EncryptInit_ex failed (%d)", tv->i);
+	}
+	if (inplace) {
+		if ((tv_out.pt != NULL) && (tv->pt != NULL))
+			memcpy(tv_out.pt, tv->pt, tv->len);
+		if ((tv_out.ct != NULL) && (tv->ct != NULL))
+			memcpy(tv_out.ct, tv->ct, tv->len);
+	}
 
 	printf("aad(");
 	datalen = tv->aadlen;
@@ -292,6 +299,8 @@ _ptct_done_:
 			test_failed("Wrong tag value (%d)", tv->i);
 	}
 
+}
+
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 	if (EVP_CIPHER_CTX_cleanup(ctx) != 1)
 		test_failed("EVP_CIPHER_CTX_cleanup failed (%d)", tv->i);
@@ -312,19 +321,12 @@ static void aes_ccm_test(int inplace, const struct aes_ccm_tv *tv)
 	unsigned char *in, *out, *buf, tag[16];
 	const EVP_CIPHER *type;
 	size_t len, datalen;
-	int outlen, rv;
+	int outlen, rv, i;
 
 	printf("aes-ccm test: ");
 
 	tv_out.ct = malloc_(tv->plen + tv->tlen);
 	tv_out.payload = malloc_(tv->plen);
-
-	if (inplace) {
-		if ((tv_out.payload != NULL) && (tv->payload != NULL))
-			memcpy(tv_out.payload, tv->payload, tv->plen);
-		if ((tv_out.ct != NULL) && (tv->ct != NULL))
-			memcpy(tv_out.ct, tv->ct, tv->plen + tv->tlen);
-	}
 
 	printf("no.%d,", tv->i);
 
@@ -391,6 +393,21 @@ static void aes_ccm_test(int inplace, const struct aes_ccm_tv *tv)
 	if (EVP_CipherInit_ex(ctx, NULL, NULL, tv->key, tv->nonce, -1) != 1)
 		test_failed("EVP_EncryptInit_ex failed (%d)", tv->i);
 
+for (i = 0; i < 2; i++) {
+
+	if (i == 1) {
+		if (EVP_CipherInit_ex(ctx, NULL, NULL, NULL,
+		                      toss_coin() == HEAD ? tv->nonce : NULL, -1) != 1) {
+			test_failed("EVP_EncryptInit_ex failed (%d)", tv->i);
+		}
+	}
+	if (inplace) {
+		if ((tv_out.payload != NULL) && (tv->payload != NULL))
+			memcpy(tv_out.payload, tv->payload, tv->plen);
+		if ((tv_out.ct != NULL) && (tv->ct != NULL))
+			memcpy(tv_out.ct, tv->ct, tv->plen + tv->tlen);
+	}
+
 	/*
 	 * Pass packet length: this can be done later implicitely if alen == 0,
 	 * so a coin toss decides in this case whether its done now (HEAD) or
@@ -455,6 +472,8 @@ _aad_done_:
 		if (memcmp(tv->ct + tv->plen, tag, tv->tlen) != 0)
 			test_failed("Wrong tag value (%d)", tv->i);
 	}
+
+}
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 	if (EVP_CIPHER_CTX_cleanup(ctx) != 1)
